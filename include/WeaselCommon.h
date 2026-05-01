@@ -145,6 +145,12 @@ namespace weasel
 			LAYOUT_HORIZONTAL_FULLSCREEN,
 			LAYOUT_TYPE_LAST
 		};
+		enum HoverType
+		{
+			HOVER_NONE,
+			HOVER_SEMI_HILITE,
+			HOVER_HILITE
+		};
 
 		PreeditType preedit_type;
 		LayoutType layout_type;
@@ -164,6 +170,18 @@ namespace weasel
 		int hilite_spacing;
 		int hilite_padding;
 		int round_corner;
+		int hilited_corner_radius;
+		int candidate_abbreviate_length;
+		int baseline;
+		int linespacing;
+		std::wstring full_icon;
+		std::wstring half_icon;
+		HoverType hover_type;
+		bool ascii_tip_follow_cursor;
+		int shadow_radius;
+		int shadow_offset_x;
+		int shadow_offset_y;
+		int shadow_color;
 		// color scheme
 		int text_color;
 		int candidate_text_color;
@@ -197,6 +215,18 @@ namespace weasel
 			hilite_spacing(0),
 			hilite_padding(0),
 			round_corner(0),
+			hilited_corner_radius(0),
+			candidate_abbreviate_length(0),
+			baseline(0),
+			linespacing(0),
+			full_icon(),
+			half_icon(),
+			hover_type(HOVER_NONE),
+			ascii_tip_follow_cursor(false),
+			shadow_radius(0),
+			shadow_offset_x(2),
+			shadow_offset_y(2),
+			shadow_color(0x000000),
 			text_color(0),
 			candidate_text_color(0),
 			label_text_color(0),
@@ -234,8 +264,20 @@ namespace boost {
 			ar & s.candidate_spacing;
 			ar & s.hilite_spacing;
 			ar & s.hilite_padding;
-			ar & s.round_corner;
-			// color scheme
+		ar & s.round_corner;
+		ar & s.hilited_corner_radius;
+		ar & s.candidate_abbreviate_length;
+		ar & s.baseline;
+		ar & s.linespacing;
+		ar & s.full_icon;
+		ar & s.half_icon;
+		ar & s.hover_type;
+		ar & s.ascii_tip_follow_cursor;
+		ar & s.shadow_radius;
+		ar & s.shadow_offset_x;
+		ar & s.shadow_offset_y;
+		ar & s.shadow_color;
+		// color scheme
 			ar & s.text_color;
 			ar & s.candidate_text_color;
 			ar & s.label_text_color;

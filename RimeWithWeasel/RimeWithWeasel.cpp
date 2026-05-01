@@ -617,6 +617,42 @@ static void _UpdateUIStyle(RimeConfig* config, weasel::UI* ui, bool initialize)
 	RimeConfigGetInt(config, "style/layout/hilite_spacing", &style.hilite_spacing);
 	RimeConfigGetInt(config, "style/layout/hilite_padding", &style.hilite_padding);
 	RimeConfigGetInt(config, "style/layout/round_corner", &style.round_corner);
+	RimeConfigGetInt(config, "style/layout/hilited_corner_radius", &style.hilited_corner_radius);
+	RimeConfigGetInt(config, "style/layout/candidate_abbreviate_length", &style.candidate_abbreviate_length);
+	RimeConfigGetInt(config, "style/layout/baseline", &style.baseline);
+	RimeConfigGetInt(config, "style/layout/linespacing", &style.linespacing);
+	{
+		char icon_path[BUF_SIZE];
+		if (RimeConfigGetString(config, "style/layout/full_icon", icon_path, sizeof(icon_path) - 1))
+		{
+			int wlen = MultiByteToWideChar(CP_UTF8, 0, icon_path, -1, NULL, 0);
+			style.full_icon.resize(wlen - 1);
+			MultiByteToWideChar(CP_UTF8, 0, icon_path, -1, &style.full_icon[0], wlen);
+		}
+		if (RimeConfigGetString(config, "style/layout/half_icon", icon_path, sizeof(icon_path) - 1))
+		{
+			int wlen = MultiByteToWideChar(CP_UTF8, 0, icon_path, -1, NULL, 0);
+			style.half_icon.resize(wlen - 1);
+			MultiByteToWideChar(CP_UTF8, 0, icon_path, -1, &style.half_icon[0], wlen);
+		}
+	}
+	{
+		char hover_type[32];
+		if (RimeConfigGetString(config, "style/hover_type", hover_type, sizeof(hover_type) - 1))
+		{
+			if (!std::strcmp(hover_type, "semi_hilite"))
+				style.hover_type = weasel::UIStyle::HOVER_SEMI_HILITE;
+			else if (!std::strcmp(hover_type, "hilite"))
+				style.hover_type = weasel::UIStyle::HOVER_HILITE;
+			else
+				style.hover_type = weasel::UIStyle::HOVER_NONE;
+		}
+	}
+	RimeConfigGetInt(config, "style/ascii_tip_follow_cursor", &style.ascii_tip_follow_cursor);
+	RimeConfigGetInt(config, "style/layout/shadow_radius", &style.shadow_radius);
+	RimeConfigGetInt(config, "style/layout/shadow_offset_x", &style.shadow_offset_x);
+	RimeConfigGetInt(config, "style/layout/shadow_offset_y", &style.shadow_offset_y);
+	RimeConfigGetInt(config, "style/layout/shadow_color", &style.shadow_color);
 	// color scheme
 	if (initialize && RimeConfigGetString(config, "style/color_scheme", buffer, BUF_SIZE))
 	{

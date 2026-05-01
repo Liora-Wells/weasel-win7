@@ -14,15 +14,18 @@ public:
 	};
 
 	WeaselTrayIcon(weasel::UI &ui);
+	~WeaselTrayIcon();
 
 	BOOL Create(HWND hTargetWnd);
 	void Refresh();
 
 protected:
 	virtual void CustomizeMenu(HMENU hMenu);
+	void _ShowBalloonNearCursor(LPCTSTR szText, LPCTSTR szTitle);
 
 	weasel::UIStyle &m_style;
 	weasel::Status &m_status;
 	WeaselTrayMode m_mode;
+	HWND m_hTipWnd;
 };
 

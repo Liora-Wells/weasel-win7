@@ -10,15 +10,23 @@ class WeaselPanel :
 	CDoubleBufferImpl<WeaselPanel>
 {
 public:
+	DECLARE_WND_CLASS_EX(L"WeaselPanel", CS_DROPSHADOW, COLOR_WINDOW)
+
 	BEGIN_MSG_MAP(WeaselPanel)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
+		MESSAGE_HANDLER(WM_MOUSEMOVE, OnMouseMove)
+		MESSAGE_HANDLER(WM_MOUSELEAVE, OnMouseLeave)
+		MESSAGE_HANDLER(WM_LBUTTONDOWN, OnLButtonDown)
 		CHAIN_MSG_MAP(CDoubleBufferImpl<WeaselPanel>)
 	END_MSG_MAP()
 
 	LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 	LRESULT OnDestroy(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 	LRESULT OnPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+	LRESULT OnMouseMove(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+	LRESULT OnMouseLeave(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+	LRESULT OnLButtonDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 	void CloseDialog(int nVal);
 
 	WeaselPanel(weasel::UI &ui);
@@ -37,6 +45,10 @@ private:
 	bool _DrawCandidates(CDCHandle dc);
 	void _HighlightText(CDCHandle dc, CRect rc, COLORREF color);
 	void _TextOut(CDCHandle dc, int x, int y, CRect const& rc, LPCWSTR psz, int cch);
+	long _GetFontHeight(CDCHandle dc) const;
+	void _StartTrackingMouse();
+	void _UpdateHoverFromPoint(POINT pt);
+	void _DrawShadow(CDCHandle dc, CRect const& rc);
 
 	weasel::Layout *m_layout;
 	weasel::Context &m_ctx;
@@ -47,4 +59,9 @@ private:
 	CIcon m_iconDisabled;
 	CIcon m_iconEnabled;
 	CIcon m_iconAlpha;
+	CIcon m_iconFull;
+	CIcon m_iconHalf;
+	int m_hoveredCandidate;
+	bool m_trackingMouse;
+	bool _LoadCustomIcon(CIcon& icon, const std::wstring& path);
 };

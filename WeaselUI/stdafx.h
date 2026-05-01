@@ -21,3 +21,5 @@
 #include <vector>
 
 #include <logging.h>
+
+#include <msimg32.h>

@@ -97,3 +97,17 @@ bool StandardLayout::ShouldDisplayStatusIcon() const
 	// rule 3. always show status icon with tips 
 	return _status.ascii_mode || !_status.composing || !_context.aux.empty();
 }
+
+CRect StandardLayout::GetCandidateRect(int id) const
+{
+	if (id < 0 || id >= MAX_CANDIDATES_COUNT)
+		return CRect(0, 0, 0, 0);
+	CRect labelRect = _candidateLabelRects[id];
+	CRect textRect = _candidateTextRects[id];
+	CRect commentRect = _candidateCommentRects[id];
+	int left = min(labelRect.left, min(textRect.left, commentRect.left));
+	int top = min(labelRect.top, min(textRect.top, commentRect.top));
+	int right = max(labelRect.right, max(textRect.right, commentRect.right));
+	int bottom = max(labelRect.bottom, max(textRect.bottom, commentRect.bottom));
+	return CRect(left, top, right, bottom);
+}

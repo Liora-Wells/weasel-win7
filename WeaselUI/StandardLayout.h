@@ -20,6 +20,7 @@ namespace weasel
 		virtual CRect GetCandidateLabelRect(int id) const { return _candidateLabelRects[id]; }
 		virtual CRect GetCandidateTextRect(int id) const { return _candidateTextRects[id]; }
 		virtual CRect GetCandidateCommentRect(int id) const { return _candidateCommentRects[id]; }
+		virtual CRect GetCandidateRect(int id) const;
 		virtual CRect GetStatusIconRect() const { return _statusIconRect; }
 
 		virtual std::wstring GetLabelText(const std::vector<Text> &labels, int id, const wchar_t *format) const;

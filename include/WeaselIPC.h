@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <WeaselCommon.h>
 #include <WeaselUtility.h>
 #include <windows.h>
@@ -30,6 +30,8 @@ enum WEASEL_IPC_COMMAND
 	WEASEL_IPC_TRAY_COMMAND,
 	WEASEL_IPC_LAST_COMMAND
 };
+
+#define WM_CANDIDATE_CLICKED (WM_APP + 100)
 
 namespace weasel
 {
