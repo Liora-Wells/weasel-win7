@@ -22,10 +22,12 @@ public:
 protected:
 	virtual void CustomizeMenu(HMENU hMenu);
 	void _ShowBalloonNearCursor(LPCTSTR szText, LPCTSTR szTitle);
+	void _BuildColorSchemeMenu(HMENU hMenu);
 
 	weasel::UIStyle &m_style;
 	weasel::Status &m_status;
 	WeaselTrayMode m_mode;
 	HWND m_hTipWnd;
+	std::vector<std::wstring> m_color_scheme_ids;
 };
 

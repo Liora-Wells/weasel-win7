@@ -181,6 +181,9 @@ namespace weasel
 		bool global_ascii_mode;
 		bool paging_on_scroll;
 		int antialias_mode;
+		int show_notifications;
+		int show_notifications_time;
+		int log_level;
 		int shadow_radius;
 		int shadow_offset_x;
 		int shadow_offset_y;
@@ -229,6 +232,9 @@ namespace weasel
 			global_ascii_mode(false),
 			paging_on_scroll(true),
 			antialias_mode(0),
+			show_notifications(1),
+			show_notifications_time(1200),
+			log_level(0),
 			shadow_radius(0),
 			shadow_offset_x(2),
 			shadow_offset_y(2),
@@ -282,6 +288,9 @@ namespace boost {
 		ar & s.global_ascii_mode;
 		ar & s.paging_on_scroll;
 		ar & s.antialias_mode;
+		ar & s.show_notifications;
+		ar & s.show_notifications_time;
+		ar & s.log_level;
 		ar & s.shadow_radius;
 		ar & s.shadow_offset_x;
 		ar & s.shadow_offset_y;

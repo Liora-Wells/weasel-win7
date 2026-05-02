@@ -56,4 +56,50 @@ void WeaselServerApp::SetupMenuHandlers()
 	m_server.AddMenuHandler(ID_WEASELTRAY_CHECKUPDATE, check_update);
 	m_server.AddMenuHandler(ID_WEASELTRAY_INSTALLDIR, std::bind(explore, dir));
 	m_server.AddMenuHandler(ID_WEASELTRAY_USERCONFIG, std::bind(explore, WeaselUserDataPath()));
+
+	for (int i = 0; i < 20; ++i)
+	{
+		UINT menu_id = ID_WEASELTRAY_COLOR_SCHEME_BASE + i;
+		m_server.AddMenuHandler(menu_id, [this, i]() {
+			return _SwitchColorScheme(i);
+		});
+	}
+}
+
+bool WeaselServerApp::_SwitchColorScheme(int index)
+{
+	const std::vector<std::wstring>& ids = tray_icon.m_color_scheme_ids;
+	if (index < 0 || index >= (int)ids.size())
+		return false;
+
+	std::string scheme_id;
+	const std::wstring& wid = ids[index];
+	scheme_id.assign(wid.begin(), wid.end());
+
+	RimeApi* rime = rime_get_api();
+	if (!rime) return false;
+
+	RimeConfig config;
+	if (!rime->config_open("weasel", &config)) return false;
+
+	const char* current = rime->config_get_cstring(&config, "style/color_scheme");
+	if (current && scheme_id == current)
+	{
+		rime->config_close(&config);
+		return false;
+	}
+
+	rime->config_close(&config);
+
+	RimeModule* levers_module = rime->find_module("levers");
+	if (!levers_module) return false;
+
+	RimeLeversApi* api = (RimeLeversApi*)levers_module->get_api();
+	if (!api) return false;
+
+	RimeCustomSettings* settings = api->custom_settings_init("weasel", "Weasel::UIStyleSettings");
+	api->customize_string(settings, "style/color_scheme", scheme_id.c_str());
+
+	m_handler->Reload();
+	return true;
 }

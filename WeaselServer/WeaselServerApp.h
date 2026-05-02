@@ -57,6 +57,7 @@ public:
 
 protected:
 	void SetupMenuHandlers();
+	bool _SwitchColorScheme(int index);
 
 	weasel::Server m_server;
 	weasel::UI m_ui;

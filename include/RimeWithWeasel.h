@@ -32,6 +32,7 @@ public:
 	virtual void SetOption(UINT session_id, const std::string &opt, bool val);
 
 	void OnUpdateUI(std::function<void()> const &cb);
+	void Reload();
 
 private:
 	void _Setup();

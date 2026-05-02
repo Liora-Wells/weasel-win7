@@ -20,6 +20,52 @@ WeaselTrayIcon::~WeaselTrayIcon()
 
 void WeaselTrayIcon::CustomizeMenu(HMENU hMenu)
 {
+	_BuildColorSchemeMenu(hMenu);
+}
+
+void WeaselTrayIcon::_BuildColorSchemeMenu(HMENU hMenu)
+{
+	m_color_scheme_ids.clear();
+
+	RimeApi* rime = rime_get_api();
+	if (!rime) return;
+
+	RimeConfig config;
+	if (!rime->config_open("weasel", &config)) return;
+
+	RimeConfigIterator iter;
+	if (!rime->config_begin_map(&iter, &config, "preset_color_schemes"))
+	{
+		rime->config_close(&config);
+		return;
+	}
+
+	int count = 0;
+	while (rime->config_next(&iter))
+	{
+		if (count >= 20) break;
+
+		std::string name_key(iter.path);
+		name_key += "/name";
+		const char* name = rime->config_get_cstring(&config, name_key.c_str());
+		if (!name) name = iter.key;
+
+		std::wstring wname;
+		wname.assign(name, name + strlen(name));
+
+		UINT menu_id = ID_WEASELTRAY_COLOR_SCHEME_BASE + count;
+		AppendMenuW(hMenu, MF_STRING, menu_id, wname.c_str());
+
+		m_color_scheme_ids.push_back(utf8towcs(iter.key));
+		count++;
+	}
+	rime->config_end(&iter);
+	rime->config_close(&config);
+
+	if (count > 0)
+	{
+		AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+	}
 }
 
 BOOL WeaselTrayIcon::Create(HWND hTargetWnd)

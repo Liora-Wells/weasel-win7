@@ -328,6 +328,23 @@ void RimeWithWeaselHandler::OnUpdateUI(std::function<void()> const &cb)
 	_UpdateUICallback = cb;
 }
 
+void RimeWithWeaselHandler::Reload()
+{
+	if (!m_ui) return;
+
+	RimeConfig config = { NULL };
+	if (RimeConfigOpen("weasel", &config))
+	{
+		m_ui->style() = m_base_style;
+		_UpdateUIStyle(&config, m_ui, false);
+		RimeConfigClose(&config);
+	}
+
+	m_ui->Refresh();
+	if (_UpdateUICallback)
+		_UpdateUICallback();
+}
+
 
 bool RimeWithWeaselHandler::_IsDeployerRunning()
 {
@@ -404,25 +421,28 @@ void RimeWithWeaselHandler::_LoadSchemaSpecificSettings(const std::string& schem
 }
 
 bool RimeWithWeaselHandler::_ShowMessage(weasel::Context& ctx, weasel::Status& status) {
-	// show as auxiliary string
+	if (!m_ui) return false;
+	int notify_mode = m_ui->style().show_notifications;
+	if (notify_mode == 0)
+		return false;
+
 	std::wstring& tips(ctx.aux.str);
 	bool show_icon = false;
 	if (m_message_type == "deploy") {
-		if (m_message_type == "start")
-			tips = L"正在部署 RIME";
-		else if (m_message_value == "success")
+		if (m_message_value == "success")
 			tips = L"部署完成";
 		else if (m_message_value == "failure")
 			tips = L"有錯誤，請查看日誌 %TEMP%\\rime.weasel.*.INFO";
 	}
 	else if (m_message_type == "schema") {
-		tips = /*L"【" + */status.schema_name/* + L"】"*/;
+		if (notify_mode >= 1)
+			tips = status.schema_name;
 	}
 	else if (m_message_type == "option") {
 		if (m_message_value == "!ascii_mode")
-			show_icon = true;  //tips = L"中文";
+			show_icon = true;
 		else if (m_message_value == "ascii_mode")
-			show_icon = true;  //tips = L"西文";
+			show_icon = true;
 		else if (m_message_value == "!full_shape")
 			tips = L"半角";
 		else if (m_message_value == "full_shape")
@@ -440,7 +460,10 @@ bool RimeWithWeaselHandler::_ShowMessage(weasel::Context& ctx, weasel::Status& s
 		return m_ui->IsCountingDown();
 
 	m_ui->Update(ctx, status);
-	m_ui->ShowWithTimeout(1200 + 200 * tips.length());
+	DWORD timeout = m_ui->style().show_notifications_time;
+	if (timeout <= 0)
+		timeout = 1200;
+	m_ui->ShowWithTimeout(timeout + 200 * tips.length());
 	return true;
 }
 
@@ -670,6 +693,8 @@ static void _UpdateUIStyle(RimeConfig* config, weasel::UI* ui, bool initialize)
 	RimeConfigGetInt(config, "style/global_ascii_mode", &style.global_ascii_mode);
 	RimeConfigGetInt(config, "style/paging_on_scroll", &style.paging_on_scroll);
 	RimeConfigGetInt(config, "style/antialias_mode", &style.antialias_mode);
+	RimeConfigGetInt(config, "style/show_notifications", &style.show_notifications);
+	RimeConfigGetInt(config, "style/show_notifications_time", &style.show_notifications_time);
 	RimeConfigGetInt(config, "style/layout/shadow_radius", &style.shadow_radius);
 	RimeConfigGetInt(config, "style/layout/shadow_offset_x", &style.shadow_offset_x);
 	RimeConfigGetInt(config, "style/layout/shadow_offset_y", &style.shadow_offset_y);
