@@ -437,6 +437,31 @@ LRESULT WeaselPanel::OnLButtonDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL
 	return 0;
 }
 
+LRESULT WeaselPanel::OnMouseWheel(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+	if (zDelta == 0)
+	{
+		bHandled = FALSE;
+		return 0;
+	}
+	UINT vkey = 0;
+	if (m_style.paging_on_scroll)
+	{
+		vkey = (zDelta > 0) ? VK_PRIOR : VK_NEXT;
+	}
+	else
+	{
+		vkey = (zDelta > 0) ? VK_UP : VK_DOWN;
+	}
+	HWND parent = GetParent();
+	if (parent != NULL)
+	{
+		::SendMessage(parent, WM_KEYDOWN, vkey, 0);
+	}
+	return 0;
+}
+
 void WeaselPanel::_StartTrackingMouse()
 {
 	if (!m_trackingMouse)

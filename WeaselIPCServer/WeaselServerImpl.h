@@ -28,6 +28,7 @@ namespace weasel
 			MESSAGE_HANDLER(WM_QUERYENDSESSION, OnQueryEndSystemSession)
 			MESSAGE_HANDLER(WM_ENDSESSION, OnEndSystemSession)
 			MESSAGE_HANDLER(WM_COMMAND, OnCommand)
+			MESSAGE_HANDLER(WM_CANDIDATE_SCROLL, OnCandidateScroll)
 		END_MSG_MAP()
 
 		LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -36,6 +37,7 @@ namespace weasel
 		LRESULT OnQueryEndSystemSession(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT OnEndSystemSession(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT OnCommand(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT OnCandidateScroll(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		DWORD OnCommand(WEASEL_IPC_COMMAND uMsg, DWORD wParam, DWORD lParam);
 		DWORD OnEcho(WEASEL_IPC_COMMAND uMsg, DWORD wParam, DWORD lParam);
 		DWORD OnStartSession(WEASEL_IPC_COMMAND uMsg, DWORD wParam, DWORD lParam);

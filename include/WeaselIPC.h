@@ -32,6 +32,7 @@ enum WEASEL_IPC_COMMAND
 };
 
 #define WM_CANDIDATE_CLICKED (WM_APP + 100)
+#define WM_CANDIDATE_SCROLL (WM_APP + 101)
 
 namespace weasel
 {

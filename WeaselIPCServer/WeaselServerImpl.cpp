@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "WeaselServerImpl.h"
 #include <Windows.h>
 #include <VersionHelpers.hpp>
@@ -114,6 +114,29 @@ DWORD ServerImpl::OnCommand(WEASEL_IPC_COMMAND uMsg, DWORD wParam, DWORD lParam)
 	BOOL handled = TRUE;
 	OnCommand(uMsg, wParam, lParam, handled);
 	return handled;
+}
+
+LRESULT ServerImpl::OnCandidateScroll(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	int direction = (int)wParam;
+	int mode = (int)lParam;
+	UINT vkey = 0;
+	if (mode == 0)
+	{
+		vkey = (direction > 0) ? VK_PRIOR : VK_NEXT;
+	}
+	else
+	{
+		vkey = (direction > 0) ? VK_UP : VK_DOWN;
+	}
+	if (m_pRequestHandler != NULL)
+	{
+		weasel::KeyEvent key;
+		key.keycode = vkey;
+		key.mask = 0;
+		m_pRequestHandler->ProcessKeyEvent(key, 0);
+	}
+	return 0;
 }
 
 int ServerImpl::Start()
