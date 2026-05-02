@@ -2,6 +2,7 @@
 #include <WeaselIPC.h>
 #include <WeaselUI.h>
 #include <map>
+#include <set>
 #include <string>
 
 #include <rime_api.h>
@@ -48,6 +49,8 @@ private:
 
 	AppOptionsByAppName m_app_options;
 	weasel::UI* m_ui;  // reference
+	bool m_global_ascii;
+	std::set<UINT> m_sessions;
 	UINT m_active_session;
 	bool m_disabled;
 	bool m_vista_greater;

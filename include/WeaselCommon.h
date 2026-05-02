@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 //#include <string>
 //#include <vector>
@@ -178,6 +178,7 @@ namespace weasel
 		std::wstring half_icon;
 		HoverType hover_type;
 		bool ascii_tip_follow_cursor;
+		bool global_ascii_mode;
 		int shadow_radius;
 		int shadow_offset_x;
 		int shadow_offset_y;
@@ -223,6 +224,7 @@ namespace weasel
 			half_icon(),
 			hover_type(HOVER_NONE),
 			ascii_tip_follow_cursor(false),
+			global_ascii_mode(false),
 			shadow_radius(0),
 			shadow_offset_x(2),
 			shadow_offset_y(2),
@@ -273,6 +275,7 @@ namespace boost {
 		ar & s.half_icon;
 		ar & s.hover_type;
 		ar & s.ascii_tip_follow_cursor;
+		ar & s.global_ascii_mode;
 		ar & s.shadow_radius;
 		ar & s.shadow_offset_x;
 		ar & s.shadow_offset_y;

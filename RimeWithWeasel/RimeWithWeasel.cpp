@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include <logging.h>
 #include <RimeWithWeasel.h>
 #include <StringAlgorithm.hpp>
@@ -19,6 +19,7 @@ RimeWithWeaselHandler::RimeWithWeaselHandler(weasel::UI *ui)
 	, m_disabled(true)
 	, _UpdateUICallback(NULL)
 	, m_vista_greater(IsWindowsVistaOrGreater())
+	, m_global_ascii(false)
 {
 	_Setup();
 }
@@ -101,6 +102,11 @@ UINT RimeWithWeaselHandler::AddSession(LPWSTR buffer, EatLine eat)
 		if (m_disabled) return 0;
 	}
 	UINT session_id = RimeCreateSession();
+	m_sessions.insert(session_id);
+	if (m_ui->style().global_ascii_mode && m_global_ascii)
+	{
+		RimeSetOption(session_id, "ascii_mode", true);
+	}
 	DLOG(INFO) << "Add session: created session_id = " << session_id;
 	_ReadClientInfo(session_id, buffer);
 	// show session's welcome message :-) if any
@@ -117,6 +123,7 @@ UINT RimeWithWeaselHandler::RemoveSession(UINT session_id)
 	if (m_ui) m_ui->Hide();
 	if (m_disabled) return 0;
 	DLOG(INFO) << "Remove session: session_id = " << session_id;
+	m_sessions.erase(session_id);
 	// TODO: force committing? otherwise current composition would be lost
 	RimeDestroySession(session_id);
 	m_active_session = 0;
@@ -302,7 +309,18 @@ void RimeWithWeaselHandler::EndMaintenance()
 
 void RimeWithWeaselHandler::SetOption(UINT session_id, const std::string & opt, bool val)
 {
-	RimeSetOption(session_id, opt.c_str(), val);
+	if (m_ui->style().global_ascii_mode && opt == "ascii_mode")
+	{
+		m_global_ascii = val;
+		for (std::set<UINT>::iterator it = m_sessions.begin(); it != m_sessions.end(); ++it)
+		{
+			RimeSetOption(*it, "ascii_mode", val);
+		}
+	}
+	else
+	{
+		RimeSetOption(session_id, opt.c_str(), val);
+	}
 }
 
 void RimeWithWeaselHandler::OnUpdateUI(std::function<void()> const &cb)
@@ -649,6 +667,7 @@ static void _UpdateUIStyle(RimeConfig* config, weasel::UI* ui, bool initialize)
 		}
 	}
 	RimeConfigGetInt(config, "style/ascii_tip_follow_cursor", &style.ascii_tip_follow_cursor);
+	RimeConfigGetInt(config, "style/global_ascii_mode", &style.global_ascii_mode);
 	RimeConfigGetInt(config, "style/layout/shadow_radius", &style.shadow_radius);
 	RimeConfigGetInt(config, "style/layout/shadow_offset_x", &style.shadow_offset_x);
 	RimeConfigGetInt(config, "style/layout/shadow_offset_y", &style.shadow_offset_y);
@@ -736,6 +755,20 @@ void RimeWithWeaselHandler::_GetStatus(weasel::Status & stat, UINT session_id)
 		}
 		stat.schema_name = utf8towcs(status.schema_name);
 		stat.ascii_mode = !!status.is_ascii_mode;
+		if (m_ui->style().global_ascii_mode)
+		{
+			if (stat.ascii_mode != m_global_ascii)
+			{
+				m_global_ascii = stat.ascii_mode;
+				for (std::set<UINT>::iterator it = m_sessions.begin(); it != m_sessions.end(); ++it)
+				{
+					if (*it != session_id)
+					{
+						RimeSetOption(*it, "ascii_mode", m_global_ascii);
+					}
+				}
+			}
+		}
 		stat.composing = !!status.is_composing;
 		stat.disabled = !!status.is_disabled;
 		RimeFreeStatus(&status);
