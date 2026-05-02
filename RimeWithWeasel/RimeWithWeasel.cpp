@@ -669,6 +669,7 @@ static void _UpdateUIStyle(RimeConfig* config, weasel::UI* ui, bool initialize)
 	RimeConfigGetInt(config, "style/ascii_tip_follow_cursor", &style.ascii_tip_follow_cursor);
 	RimeConfigGetInt(config, "style/global_ascii_mode", &style.global_ascii_mode);
 	RimeConfigGetInt(config, "style/paging_on_scroll", &style.paging_on_scroll);
+	RimeConfigGetInt(config, "style/antialias_mode", &style.antialias_mode);
 	RimeConfigGetInt(config, "style/layout/shadow_radius", &style.shadow_radius);
 	RimeConfigGetInt(config, "style/layout/shadow_offset_x", &style.shadow_offset_x);
 	RimeConfigGetInt(config, "style/layout/shadow_offset_y", &style.shadow_offset_y);

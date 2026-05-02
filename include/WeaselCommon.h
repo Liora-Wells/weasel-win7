@@ -180,6 +180,7 @@ namespace weasel
 		bool ascii_tip_follow_cursor;
 		bool global_ascii_mode;
 		bool paging_on_scroll;
+		int antialias_mode;
 		int shadow_radius;
 		int shadow_offset_x;
 		int shadow_offset_y;
@@ -227,6 +228,7 @@ namespace weasel
 			ascii_tip_follow_cursor(false),
 			global_ascii_mode(false),
 			paging_on_scroll(true),
+			antialias_mode(0),
 			shadow_radius(0),
 			shadow_offset_x(2),
 			shadow_offset_y(2),
@@ -279,6 +281,7 @@ namespace boost {
 		ar & s.ascii_tip_follow_cursor;
 		ar & s.global_ascii_mode;
 		ar & s.paging_on_scroll;
+		ar & s.antialias_mode;
 		ar & s.shadow_radius;
 		ar & s.shadow_offset_x;
 		ar & s.shadow_offset_y;

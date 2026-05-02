@@ -51,6 +51,7 @@ private:
 	void _StartTrackingMouse();
 	void _UpdateHoverFromPoint(POINT pt);
 	void _DrawShadow(CDCHandle dc, CRect const& rc);
+	BYTE _GetFontQuality() const;
 
 	weasel::Layout *m_layout;
 	weasel::Context &m_ctx;

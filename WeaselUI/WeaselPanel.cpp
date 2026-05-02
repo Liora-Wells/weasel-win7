@@ -32,9 +32,10 @@ WeaselPanel::~WeaselPanel()
 void WeaselPanel::_ResizeWindow()
 {
 	CDCHandle dc = GetDC();
-	long fontHeight = -MulDiv(m_style.font_point, dc.GetDeviceCaps(LOGPIXELSY), 72);
+	long fontHeight = _GetFontHeight(dc);
+	BYTE quality = _GetFontQuality();
 	CFont font;
-	font.CreateFontW(fontHeight, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, 0, m_style.font_face.c_str());
+	font.CreateFontW(fontHeight, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, quality, 0, 0, 0, m_style.font_face.c_str());
 	dc.SelectFont(font);
 
 	CSize size = m_layout->GetContentSize();
@@ -72,9 +73,10 @@ void WeaselPanel::Refresh()
 	_CreateLayout();
 
 	CDCHandle dc = GetDC();
-	long fontHeight = -MulDiv(m_style.font_point, dc.GetDeviceCaps(LOGPIXELSY), 72);
+	long fontHeight = _GetFontHeight(dc);
+	BYTE quality = _GetFontQuality();
 	CFont font;
-	font.CreateFontW(fontHeight, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, 0, m_style.font_face.c_str());
+	font.CreateFontW(fontHeight, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, quality, 0, 0, 0, m_style.font_face.c_str());
 	dc.SelectFont(font);
 	m_layout->DoLayout(dc);
 	ReleaseDC(dc);
@@ -331,10 +333,11 @@ void WeaselPanel::DoPaint(CDCHandle dc)
 		dc.SelectBrush(oldBrush);
 	}
 
-	long height = -MulDiv(m_style.font_point, dc.GetDeviceCaps(LOGPIXELSY), 72);
+	long height = _GetFontHeight(dc);
+	BYTE quality = _GetFontQuality();
 
 	CFont font;
-	font.CreateFontW(height, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, 0, m_style.font_face.c_str());
+	font.CreateFontW(height, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, quality, 0, 0, 0, m_style.font_face.c_str());
 	CFontHandle oldFont = dc.SelectFont(font);
 
 	dc.SetTextColor(m_style.text_color);
@@ -510,6 +513,17 @@ bool WeaselPanel::_LoadCustomIcon(CIcon& icon, const std::wstring& path)
 long WeaselPanel::_GetFontHeight(CDCHandle dc) const
 {
 	return -MulDiv(m_style.font_point, dc.GetDeviceCaps(LOGPIXELSY), 72);
+}
+
+BYTE WeaselPanel::_GetFontQuality() const
+{
+	switch (m_style.antialias_mode)
+	{
+	case 1: return CLEARTYPE_QUALITY;
+	case 2: return ANTIALIASED_QUALITY;
+	case 3: return NONANTIALIASED_QUALITY;
+	default: return DEFAULT_QUALITY;
+	}
 }
 
 void WeaselPanel::CloseDialog(int nVal)
