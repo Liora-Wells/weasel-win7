@@ -103,7 +103,7 @@ UINT RimeWithWeaselHandler::AddSession(LPWSTR buffer, EatLine eat)
 	}
 	UINT session_id = RimeCreateSession();
 	m_sessions.insert(session_id);
-	if (m_ui->style().global_ascii_mode && m_global_ascii)
+	if (m_ui && m_ui->style().global_ascii_mode && m_global_ascii)
 	{
 		RimeSetOption(session_id, "ascii_mode", true);
 	}
