@@ -162,17 +162,21 @@ jobs:
         shell: cmd
         working-directory: ${{ env.BOOST_ROOT }}
         run: |
-          rem Use v142 toolset (not VS 2022 default v143) for Win7 compatibility
-          call "%VCVARS_PATH%" x86 -vcvars_ver=%VCVARS_VER%
-          if not exist bjam.exe call bootstrap.bat
-          if %ERRORLEVEL% NEQ 0 exit /b 1
+          rem Use default VS 2022 toolset for bootstrap (only builds b2.exe)
+          call "%VCVARS_PATH%" x86
+          if not exist b2.exe call bootstrap.bat
+          if %ERRORLEVEL% NEQ 0 (
+            echo === bootstrap.log ===
+            type bootstrap.log
+            exit /b 1
+          )
 
           rem Build x86 (Win32) - Win7 compatible settings
-          bjam toolset=%BJAM_TOOLSET% variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
+          b2 toolset=%BJAM_TOOLSET% variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
           if %ERRORLEVEL% NEQ 0 exit /b 1
 
           rem Build x64
-          bjam toolset=%BJAM_TOOLSET% variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 address-model=64 --stagedir=stage_x64 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
+          b2 toolset=%BJAM_TOOLSET% variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 address-model=64 --stagedir=stage_x64 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
           if %ERRORLEVEL% NEQ 0 exit /b 1
 
       # ==================== 4. Verify librime files ====================
