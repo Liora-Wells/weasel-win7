@@ -162,9 +162,15 @@ jobs:
         shell: cmd
         working-directory: ${{ env.BOOST_ROOT }}
         run: |
-          rem Use default VS 2022 toolset for bootstrap (only builds b2.exe)
-          call "%VCVARS_PATH%" x86
-          if not exist b2.exe call bootstrap.bat vc142
+          rem Set up v142 toolset environment for bootstrap
+          call "%VCVARS_PATH%" x86 -vcvars_ver=%VCVARS_VER%
+          if %ERRORLEVEL% NEQ 0 (
+            echo Failed to set up v142 environment
+            exit /b 1
+          )
+
+          rem Bootstrap with current toolset (v142) - auto-detected
+          if not exist b2.exe call bootstrap.bat
           if %ERRORLEVEL% NEQ 0 (
             echo === bootstrap.log ===
             type bootstrap.log
