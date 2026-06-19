@@ -135,11 +135,22 @@ jobs:
         run: |
           $boostVer = $env:BOOST_VERSION -replace '\.', '_'
           $boostZip = "$env:TEMP\boost_$boostVer.7z"
-          # SourceForge is more reliable than archives.boost.io
-          $boostUrl = "https://sourceforge.net/projects/boost/files/boost/$env:BOOST_VERSION/boost_$boostVer.7z/download"
+
+          # SourceForge direct download (follows redirects properly with curl)
+          $boostUrl = "https://downloads.sourceforge.net/project/boost/boost/$env:BOOST_VERSION/boost_$boostVer.7z"
 
           Write-Host "Downloading Boost $env:BOOST_VERSION from SourceForge..."
-          Invoke-WebRequest -Uri $boostUrl -OutFile $boostZip -UseBasicParsing
+          curl.exe -L -o $boostZip $boostUrl --retry 3 --connect-timeout 30
+
+          # Verify the downloaded file is a valid 7z archive
+          $fileSize = (Get-Item $boostZip).Length
+          $sizeStr = "{0:N0}" -f $fileSize
+          Write-Host "Downloaded: $sizeStr bytes"
+          if ($fileSize -lt 100000) {
+            Write-Error "Downloaded file is too small ($fileSize bytes), likely a redirect page."
+            Get-Content $boostZip -First 5
+            exit 1
+          }
 
           Write-Host "Extracting Boost to $env:BOOST_ROOT ..."
           New-Item -ItemType Directory -Path $env:BOOST_ROOT -Force | Out-Null
