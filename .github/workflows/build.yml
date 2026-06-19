@@ -164,7 +164,7 @@ jobs:
         run: |
           rem Use default VS 2022 toolset for bootstrap (only builds b2.exe)
           call "%VCVARS_PATH%" x86
-          if not exist b2.exe call bootstrap.bat
+          if not exist b2.exe call bootstrap.bat vc142
           if %ERRORLEVEL% NEQ 0 (
             echo === bootstrap.log ===
             type bootstrap.log
