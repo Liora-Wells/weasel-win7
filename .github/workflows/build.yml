@@ -33,6 +33,7 @@ jobs:
       BOOST_ROOT: C:\Libraries\boost_1_69_0
       BOOST_VERSION: 1.69.0
       PLATFORM_TOOLSET: v141
+      PYTHON_HOME: C:\py_dummy
       LIBRIME_VERSION: ${{ github.event.inputs.librime_version }}
 
     steps:
@@ -73,14 +74,14 @@ jobs:
               --add Microsoft.VisualStudio.Component.Windows10SDK.17763 `
               --quiet --wait --norestart
             if ($LASTEXITCODE -ne 0) {
-              Write-Warning "v141 工具集安装失败（退出码: $LASTEXITCODE），回退到 v143..."
-              "PLATFORM_TOOLSET=v143" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+              Write-Error "v141 工具集安装失败（退出码: $LASTEXITCODE），无法继续构建。Win7 兼容性需要 v141 工具集。"
+              exit 1
             } else {
               Write-Host "v141 工具集安装成功"
             }
           } else {
-            Write-Warning "未找到 VS Installer，回退到 v143 工具集"
-            "PLATFORM_TOOLSET=v143" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Error "未找到 VS Installer，无法安装 v141 工具集。Win7 兼容性构建中止。"
+            exit 1
           }
 
       - name: 安装 NSIS
@@ -187,7 +188,7 @@ jobs:
           "@ | Out-File -FilePath "env.bat" -Encoding ascii
 
           # 生成 weasel.props（通过 render.js）
-          cscript.exe render.js weasel.props BOOST_ROOT PLATFORM_TOOLSET
+          cscript.exe render.js weasel.props BOOST_ROOT PLATFORM_TOOLSET PYTHON_HOME
 
           # 创建 Directory.Build.props 确保 Win7 兼容性
           # v141 工具集默认目标为 Windows 10，需要显式设置 _WIN32_WINNT
