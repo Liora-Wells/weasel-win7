@@ -1,0 +1,331 @@
+name: 手动构建 Weasel（小狼毫）
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Weasel 版本号'
+        required: false
+        default: '0.14.3'
+      build_number:
+        description: '构建号'
+        required: false
+        default: '0'
+      librime_version:
+        description: 'librime 版本号'
+        required: false
+        default: '1.11.2'
+      build_installer:
+        description: '生成安装包'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: windows-2019
+    name: 构建 Weasel 输入法
+
+    env:
+      WEASEL_VERSION: ${{ github.event.inputs.version }}
+      WEASEL_BUILD: ${{ github.event.inputs.build_number }}
+      WEASEL_ROOT: ${{ github.workspace }}
+      BOOST_ROOT: C:\Libraries\boost_1_69_0
+      BOOST_VERSION: 1.69.0
+      PLATFORM_TOOLSET: v141
+      LIBRIME_VERSION: ${{ github.event.inputs.librime_version }}
+
+    steps:
+      # ==================== 1. 检出代码 ====================
+      - name: 检出代码（含子模块）
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # ==================== 2. 安装构建工具 ====================
+      - name: 安装 VS 2017 工具集 (v141)
+        shell: powershell
+        run: |
+          # 检查 v141 工具集是否已安装
+          $v141Path = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\14.16"
+          if (Test-Path $v141Path) {
+            Write-Host "v141 工具集已安装，跳过安装步骤。"
+            exit 0
+          }
+
+          Write-Host "正在安装 v141 工具集（用于 Win7 兼容性）..."
+          $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $vsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
+
+          if (Test-Path $installer) {
+            & $installer modify --installPath $vsPath `
+              --add Microsoft.VisualStudio.Component.VC.v141.x86.x64 `
+              --add Microsoft.VisualStudio.Component.Windows10SDK.17763 `
+              --quiet --wait --norestart
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "v141 工具集安装失败（退出码: $LASTEXITCODE），尝试使用 v142 作为备选..."
+              "PLATFORM_TOOLSET=v142" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            }
+          } else {
+            Write-Warning "未找到 VS Installer，将使用 v142 工具集"
+            "PLATFORM_TOOLSET=v142" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+      - name: 安装 NSIS
+        shell: powershell
+        run: |
+          choco install nsis -y --no-progress --limit-output
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "NSIS 安装失败，安装包生成将被跳过。"
+          }
+
+      # ==================== 3. 缓存并构建 Boost ====================
+      - name: 缓存 Boost
+        id: cache-boost
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.BOOST_ROOT }}\stage
+            ${{ env.BOOST_ROOT }}\stage_x64
+          key: boost-${{ env.BOOST_VERSION }}-v141-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
+
+      - name: 下载 Boost 源码
+        if: steps.cache-boost.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          $boostZip = "$env:TEMP\boost_$($env:BOOST_VERSION -replace '\.', '_').zip"
+          $boostUrl = "https://archives.boost.io/release/$env:BOOST_VERSION/source/boost_$($env:BOOST_VERSION -replace '\.', '_').zip"
+
+          Write-Host "下载 Boost $env:BOOST_VERSION ..."
+          Invoke-WebRequest -Uri $boostUrl -OutFile $boostZip -UseBasicParsing
+
+          Write-Host "解压 Boost 到 $env:BOOST_ROOT ..."
+          Expand-Archive -Path $boostZip -DestinationPath "C:\Libraries" -Force
+
+          # 确认解压后的目录名正确
+          $extracted = Get-ChildItem "C:\Libraries" -Directory | Where-Object { $_.Name -like "boost_*" } | Select-Object -First 1
+          if ($extracted.Name -ne "boost_$($env:BOOST_VERSION -replace '\.', '_')") {
+            Rename-Item $extracted.FullName "boost_$($env:BOOST_VERSION -replace '\.', '_')"
+          }
+
+      - name: 构建 Boost
+        if: steps.cache-boost.outputs.cache-hit != 'true'
+        shell: cmd
+        working-directory: ${{ env.BOOST_ROOT }}
+        run: |
+          if not exist bjam.exe call bootstrap.bat
+          if %ERRORLEVEL% NEQ 0 exit /b 1
+
+          rem 构建 x86 (Win32) - 使用 Win7 兼容设置
+          bjam toolset=msvc-14.1 variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
+          if %ERRORLEVEL% NEQ 0 exit /b 1
+
+          rem 构建 x64
+          bjam toolset=msvc-14.1 variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 address-model=64 --stagedir=stage_x64 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
+          if %ERRORLEVEL% NEQ 0 exit /b 1
+
+      # ==================== 4. 验证本地 librime 文件 ====================
+      # librime 1.11.2 的头文件、lib、dll 已随仓库提交，无需下载
+      - name: 验证 librime 文件
+        shell: powershell
+        working-directory: ${{ github.workspace }}
+        run: |
+          Write-Host "验证本地 librime $env:LIBRIME_VERSION 文件..."
+
+          $requiredFiles = @(
+            "include\rime_api.h",
+            "include\rime_levers_api.h",
+            "lib\rime.lib",
+            "lib\rime.dll",
+            "lib\x64\rime.lib",
+            "lib\x64\rime.dll",
+            "output\rime.dll"
+          )
+
+          $allFound = $true
+          foreach ($f in $requiredFiles) {
+            if (Test-Path $f) {
+              $size = (Get-Item $f).Length
+              Write-Host "  OK  $f ($('{0:N0}' -f $size) bytes)"
+            } else {
+              Write-Host "  FAIL $f"
+              $allFound = $false
+            }
+          }
+
+          if (-not $allFound) {
+            Write-Error "librime 文件缺失，请确认 lib/ 和 include/ 目录已提交到仓库"
+            exit 1
+          }
+
+          Write-Host ""
+          Write-Host "librime $env:LIBRIME_VERSION 文件验证通过"
+
+      # ==================== 5. 配置构建环境 ====================
+      - name: 配置构建环境
+        shell: powershell
+        working-directory: ${{ github.workspace }}
+        run: |
+          # 创建 env.bat
+          @"
+          rem GitHub Actions 构建环境配置
+          set BOOST_ROOT=$env:BOOST_ROOT
+          set PLATFORM_TOOLSET=$env:PLATFORM_TOOLSET
+          set BJAM_TOOLSET=msvc-14.1
+          "@ | Out-File -FilePath "env.bat" -Encoding ascii
+
+          # 生成 weasel.props（通过 render.js）
+          cscript.exe render.js weasel.props BOOST_ROOT PLATFORM_TOOLSET
+
+          # 创建 Directory.Build.props 确保 Win7 兼容性
+          # v141 工具集默认目标为 Windows 10，需要显式设置 _WIN32_WINNT
+          @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+            <ItemDefinitionGroup>
+              <ClCompile>
+                <PreprocessorDefinitions>_WIN32_WINNT=0x0601;WINVER=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+              </ClCompile>
+            </ItemDefinitionGroup>
+          </Project>
+          "@ | Out-File -FilePath "Directory.Build.props" -Encoding utf8
+
+          # 复制必要文件
+          Copy-Item "LICENSE.txt" -Destination "output\" -Force
+          Copy-Item "README.md" -Destination "output\README.txt" -Force
+
+          # 显示配置信息
+          Write-Host "========================================"
+          Write-Host "构建配置:"
+          Write-Host "  WEASEL_VERSION = $env:WEASEL_VERSION"
+          Write-Host "  WEASEL_BUILD   = $env:WEASEL_BUILD"
+          Write-Host "  BOOST_ROOT     = $env:BOOST_ROOT"
+          Write-Host "  PLATFORM_TOOLSET = $env:PLATFORM_TOOLSET"
+          Write-Host "  LIBRIME_VERSION  = $env:LIBRIME_VERSION"
+          Write-Host "========================================"
+
+      # ==================== 6. 构建 ====================
+      - name: 构建 Weasel
+        shell: cmd
+        working-directory: ${{ github.workspace }}
+        run: |
+          rem 设置 MSBuild 环境
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
+
+          rem 构建数据文件（需要 bash）
+          set plum_dir=plum
+          set rime_dir=output/data
+          bash plum/rime-install
+
+          rem 备份 x86 版 rime.lib（lib\rime.lib 初始即为 x86）
+          copy /Y lib\rime.lib lib\rime_x86.lib
+
+          rem === 构建 x64 版本 ===
+          copy /Y lib\x64\rime.lib lib\rime.lib
+          copy /Y lib\x64\rime.dll output\rime.dll
+
+          msbuild.exe weasel.sln /t:Build /p:Configuration=Release /p:Platform="x64" /fl2 /m
+          if %ERRORLEVEL% NEQ 0 (
+            echo x64 构建失败，查看 msbuild2.log
+            type msbuild2.log
+            exit /b 1
+          )
+
+          rem === 构建 Win32 (x86) 版本 ===
+          copy /Y lib\rime_x86.lib lib\rime.lib
+          copy /Y lib\rime.dll output\rime.dll
+
+          msbuild.exe weasel.sln /t:Build /p:Configuration=Release /p:Platform="Win32" /fl1 /m
+          if %ERRORLEVEL% NEQ 0 (
+            echo Win32 构建失败，查看 msbuild1.log
+            type msbuild1.log
+            exit /b 1
+          )
+
+          rem === 构建繁体版本 x64 ===
+          copy /Y lib\x64\rime.lib lib\rime.lib
+          copy /Y lib\x64\rime.dll output\rime.dll
+
+          msbuild.exe weasel.sln /t:Build /p:Configuration=ReleaseHant /p:Platform="x64" /fl4 /m
+          if %ERRORLEVEL% NEQ 0 exit /b 1
+
+          rem === 构建繁体版本 Win32 ===
+          copy /Y lib\rime_x86.lib lib\rime.lib
+          copy /Y lib\rime.dll output\rime.dll
+
+          msbuild.exe weasel.sln /t:Build /p:Configuration=ReleaseHant /p:Platform="Win32" /fl3 /m
+          if %ERRORLEVEL% NEQ 0 exit /b 1
+
+          rem 清理临时备份
+          del lib\rime_x86.lib
+
+      # ==================== 7. 生成安装包 ====================
+      - name: 生成安装包
+        if: ${{ github.event.inputs.build_installer == 'true' }}
+        shell: powershell
+        working-directory: ${{ github.workspace }}
+        run: |
+          $nsis = "${env:ProgramFiles(x86)}\NSIS\Bin\makensis.exe"
+          if (-not (Test-Path $nsis)) {
+            $nsis = "${env:ProgramFiles}\NSIS\Bin\makensis.exe"
+          }
+
+          if (Test-Path $nsis) {
+            Write-Host "生成安装包..."
+            # 确保 archives 目录存在
+            New-Item -ItemType Directory -Path "output\archives" -Force | Out-Null
+            & $nsis /DWEASEL_VERSION=$env:WEASEL_VERSION /DWEASEL_BUILD=$env:WEASEL_BUILD output\install.nsi
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "NSIS 安装包生成失败"
+              exit 1
+            }
+            Write-Host "安装包已生成到 output\archives\"
+          } else {
+            Write-Warning "未找到 NSIS，跳过安装包生成。"
+            Write-Warning "构建产物在 output\ 目录中，可手动打包。"
+          }
+
+      # ==================== 8. 上传构建产物 ====================
+      - name: 上传安装包
+        if: ${{ github.event.inputs.build_installer == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: weasel-${{ env.WEASEL_VERSION }}.${{ env.WEASEL_BUILD }}-installer
+          path: output\archives\*.exe
+          retention-days: 30
+
+      - name: 上传构建产物（完整 output）
+        uses: actions/upload-artifact@v4
+        with:
+          name: weasel-${{ env.WEASEL_VERSION }}.${{ env.WEASEL_BUILD }}-output
+          path: |
+            output\*.exe
+            output\*.dll
+            output\*.ime
+            output\data\
+          retention-days: 30
+
+      # ==================== 9. 构建报告 ====================
+      - name: 构建报告
+        if: always()
+        shell: powershell
+        working-directory: ${{ github.workspace }}
+        run: |
+          Write-Host ""
+          Write-Host "========================================"
+          Write-Host "构建完成！"
+          Write-Host "========================================"
+          Write-Host "版本: $env:WEASEL_VERSION (build $env:WEASEL_BUILD)"
+          Write-Host ""
+
+          if (Test-Path "output\archives\*.exe") {
+            $installer = Get-ChildItem "output\archives\*.exe" | Select-Object -First 1
+            Write-Host "安装包: $($installer.Name)"
+          } else {
+            Write-Host "安装包: 未生成（请检查 NSIS 是否安装）"
+          }
+
+          Write-Host ""
+          Write-Host "关键产物:"
+          Get-ChildItem "output\" -File | ForEach-Object { Write-Host "  $($_.Name) ($('{0:N0}' -f $_.Length) bytes)" }
+          Write-Host "========================================"

@@ -26,8 +26,8 @@ LRESULT InstallOptionsDialog::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 		(user_dir.empty() ? IDC_RADIO_DEFAULT_DIR : IDC_RADIO_CUSTOM_DIR));
 	dir_.SetWindowTextW(user_dir.c_str());
 
-	cn_.EnableWindow(!installed);
-	tw_.EnableWindow(!installed);
+	cn_.EnableWindow(TRUE);
+	tw_.EnableWindow(TRUE);
 	remove_.EnableWindow(installed);
 	dir_.EnableWindow(user_dir.empty() ? FALSE : TRUE);
 
@@ -58,8 +58,8 @@ LRESULT InstallOptionsDialog::OnRemove(WORD, WORD code, HWND, BOOL&) {
   const bool non_silent = false;
 	uninstall(non_silent);
 	installed = false;
-	cn_.EnableWindow(!installed);
-	tw_.EnableWindow(!installed);
+	cn_.EnableWindow(TRUE);
+	tw_.EnableWindow(TRUE);
 	remove_.EnableWindow(installed);
 	return 0;
 }
