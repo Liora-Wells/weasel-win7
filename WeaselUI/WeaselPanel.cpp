@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "WeaselPanel.h"
 #include <WeaselCommon.h>
+#include <WeaselIPC.h>
 #include <Usp10.h>
 
 #include "VerticalLayout.h"
