@@ -43,54 +43,71 @@ jobs:
         with:
           submodules: recursive
 
-      # ==================== 2. Install Build Tools ====================
+      # ==================== 2. Select Build Toolset ====================
       # VS 2022 (v143) dropped Win7 targeting. We need v141 (VS 2017) or v142
-      # (VS 2019) toolset. Install VS 2019 BuildTools which includes v141 natively.
-      - name: Install VS 2019 BuildTools with v141
+      # (VS 2019). windows-2022 image typically has v142 pre-installed.
+      - name: Select Win7-compatible toolset
+        id: toolset
         shell: powershell
         run: |
-          # Check if v141 is already present in VS 2022
-          $v141vs2022 = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.16"
-          if (Test-Path $v141vs2022) {
-            Write-Host "v141 found in VS 2022, skipping install."
-            "VCVARS_PATH=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $vs2022vc = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC"
+          $vcvars = "$vs2022vc\Auxiliary\Build\vcvarsall.bat"
+          $toolsDir = "$vs2022vc\Tools\MSVC"
+
+          # List available MSVC versions for debugging
+          Write-Host "Available MSVC toolset versions:"
+          Get-ChildItem $toolsDir -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "  $($_.Name)"
+          }
+
+          # Check for v141 (MSVC 14.16.x)
+          $v141dir = Get-ChildItem "$toolsDir\14.16*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($v141dir) {
+            Write-Host "v141 (14.16) found, using PLATFORM_TOOLSET=v141"
+            "PLATFORM_TOOLSET=v141" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "BJAM_TOOLSET=msvc-14.1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "VCVARS_PATH=$vcvars" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             exit 0
           }
 
-          # Check if VS 2019 BuildTools with v141 is already installed
-          $v141bt = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Tools\MSVC\14.16"
-          if (Test-Path $v141bt) {
-            Write-Host "v141 found in VS 2019 BuildTools, skipping install."
-            "VCVARS_PATH=C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          # Check for v142 (MSVC 14.2x)
+          $v142dir = Get-ChildItem "$toolsDir\14.2*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($v142dir) {
+            Write-Host "v142 ($($v142dir.Name)) found, using PLATFORM_TOOLSET=v142"
+            Write-Host "v142 can target Win7 with _WIN32_WINNT=0x0601"
+            "PLATFORM_TOOLSET=v142" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "BJAM_TOOLSET=msvc-14.2" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "VCVARS_PATH=$vcvars" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             exit 0
           }
 
-          # Install VS 2019 BuildTools with v141 as a new installation
-          Write-Host "Installing VS 2019 BuildTools with v141 toolset..."
+          # Neither found - try to install v142 (VS 2022 native component)
+          Write-Host "No Win7-compatible toolset found. Installing v142..."
           $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
           if (-not (Test-Path $installer)) {
             Write-Error "VS Installer not found. Build aborted."
             exit 1
           }
 
-          $btPath = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools"
-          Write-Host "This may take 5-10 minutes..."
-          & $installer install --installPath $btPath `
-            --add Microsoft.VisualStudio.Workload.VCTools `
-            --add Microsoft.VisualStudio.Component.VC.v141.x86.x64 `
-            --add Microsoft.VisualStudio.Component.Windows10SDK.17763 `
+          $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          & $installer modify --installPath $vsPath `
+            --add Microsoft.VisualStudio.Component.VC.14.29.16.11.x86.x64 `
             --passive --wait --norestart
 
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "VS 2019 BuildTools install failed (exit code: $LASTEXITCODE)."
+            Write-Error "v142 toolset install failed (exit code: $LASTEXITCODE)."
             exit 1
           }
 
-          if (Test-Path $v141bt) {
-            Write-Host "VS 2019 BuildTools with v141 installed successfully."
-            "VCVARS_PATH=$btPath\VC\Auxiliary\Build\vcvarsall.bat" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          # Re-check after install
+          $v142dir = Get-ChildItem "$toolsDir\14.2*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($v142dir) {
+            Write-Host "v142 installed successfully."
+            "PLATFORM_TOOLSET=v142" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "BJAM_TOOLSET=msvc-14.2" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "VCVARS_PATH=$vcvars" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           } else {
-            Write-Error "v141 toolset not found after install. Check VS 2019 BuildTools installation."
+            Write-Error "v142 not found after install."
             exit 1
           }
 
@@ -141,11 +158,11 @@ jobs:
           if %ERRORLEVEL% NEQ 0 exit /b 1
 
           rem Build x86 (Win32) - Win7 compatible settings
-          bjam toolset=msvc-14.1 variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
+          bjam toolset=%BJAM_TOOLSET% variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
           if %ERRORLEVEL% NEQ 0 exit /b 1
 
           rem Build x64
-          bjam toolset=msvc-14.1 variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 address-model=64 --stagedir=stage_x64 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
+          bjam toolset=%BJAM_TOOLSET% variant=release link=static threading=multi runtime-link=static cxxflags="/Zc:threadSafeInit- " define=BOOST_USE_WINAPI_VERSION=0x0601 address-model=64 --stagedir=stage_x64 --with-date_time --with-filesystem --with-locale --with-regex --with-system --with-thread --with-serialization stage -q -d0
           if %ERRORLEVEL% NEQ 0 exit /b 1
 
       # ==================== 4. Verify librime files ====================
@@ -196,7 +213,7 @@ jobs:
           rem GitHub Actions build environment
           set BOOST_ROOT=$env:BOOST_ROOT
           set PLATFORM_TOOLSET=$env:PLATFORM_TOOLSET
-          set BJAM_TOOLSET=msvc-14.1
+          set BJAM_TOOLSET=$env:BJAM_TOOLSET
           "@ | Out-File -FilePath "env.bat" -Encoding ascii
 
           # Generate weasel.props via render.js
