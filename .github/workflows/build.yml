@@ -30,8 +30,8 @@ jobs:
       WEASEL_VERSION: ${{ github.event.inputs.version }}
       WEASEL_BUILD: ${{ github.event.inputs.build_number }}
       WEASEL_ROOT: ${{ github.workspace }}
-      BOOST_ROOT: C:\Libraries\boost_1_69_0
-      BOOST_VERSION: 1.69.0
+      BOOST_ROOT: C:\Libraries\boost_1_74_0
+      BOOST_VERSION: 1.74.0
       PLATFORM_TOOLSET: v141
       PYTHON_HOME: C:\py_dummy
       LIBRIME_VERSION: ${{ github.event.inputs.librime_version }}
