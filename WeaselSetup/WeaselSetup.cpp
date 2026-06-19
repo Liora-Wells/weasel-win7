@@ -1,4 +1,4 @@
-﻿// WeaselSetup.cpp : Defines the entry point for the application.
+// WeaselSetup.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
@@ -73,6 +73,9 @@ static int CustomInstall(bool installing)
 		RegCloseKey(hKey);
 	}
 
+	// 保存注册表中的原始值，用于检测语言是否被切换
+	bool saved_hant = hant;
+
 	if (!silent)
 	{
 		InstallOptionsDialog dlg;
@@ -88,6 +91,11 @@ static int CustomInstall(bool installing)
 			user_dir = dlg.user_dir;
 		}
 	}
+	// 如果用户切换了语言且 IME 已安装，先卸载旧语言版本
+	if (hant != saved_hant && has_installed())
+	{
+		uninstall(silent);
+	}
 	if (0 != install(hant, silent))
 		return 1;
 
@@ -95,7 +103,7 @@ static int CustomInstall(bool installing)
 		                 0, NULL, 0, KEY_ALL_ACCESS, 0, &hKey, NULL);
 	if (FAILED(HRESULT_FROM_WIN32(ret)))
 	{
-		MessageBox(NULL, KEY, L"安裝失敗", MB_ICONERROR | MB_OK);
+		MessageBox(NULL, KEY, L"安装失败", MB_ICONERROR | MB_OK);
 		return 1;
 	}
 
@@ -104,7 +112,7 @@ static int CustomInstall(bool installing)
 						(user_dir.length() + 1) * sizeof(WCHAR));
 	if (FAILED(HRESULT_FROM_WIN32(ret)))
 	{
-		MessageBox(NULL, L"無法寫入 RimeUserDir", L"安裝失敗", MB_ICONERROR | MB_OK);
+		MessageBox(NULL, L"无法写入 RimeUserDir", L"安装失败", MB_ICONERROR | MB_OK);
 		return 1;
 	}
 
@@ -112,7 +120,7 @@ static int CustomInstall(bool installing)
 	ret = RegSetValueEx(hKey, L"Hant", 0, REG_DWORD, (const BYTE*)&data, sizeof(DWORD));
 	if (FAILED(HRESULT_FROM_WIN32(ret)))
 	{
-		MessageBox(NULL, L"無法寫入 Hant", L"安裝失敗", MB_ICONERROR | MB_OK);
+		MessageBox(NULL, L"无法写入 Hant", L"安装失败", MB_ICONERROR | MB_OK);
 		return 1;
 	}
 
