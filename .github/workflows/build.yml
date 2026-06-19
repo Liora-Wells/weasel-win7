@@ -74,13 +74,13 @@ jobs:
               --add Microsoft.VisualStudio.Component.Windows10SDK.17763 `
               --quiet --wait --norestart
             if ($LASTEXITCODE -ne 0) {
-              Write-Error "v141 工具集安装失败（退出码: $LASTEXITCODE），无法继续构建。Win7 兼容性需要 v141 工具集。"
+              Write-Error "v141 toolset install failed (exit code: $LASTEXITCODE). Win7 compatibility requires v141."
               exit 1
             } else {
-              Write-Host "v141 工具集安装成功"
+              Write-Host "v141 toolset installed successfully"
             }
           } else {
-            Write-Error "未找到 VS Installer，无法安装 v141 工具集。Win7 兼容性构建中止。"
+            Write-Error "VS Installer not found, cannot install v141 toolset. Build aborted."
             exit 1
           }
 
@@ -159,7 +159,8 @@ jobs:
           foreach ($f in $requiredFiles) {
             if (Test-Path $f) {
               $size = (Get-Item $f).Length
-              Write-Host "  OK  $f ($('{0:N0}' -f $size) bytes)"
+              $sizeStr = "{0:N0}" -f $size
+              Write-Host "  OK  $f ($sizeStr bytes)"
             } else {
               Write-Host "  FAIL $f"
               $allFound = $false
@@ -167,7 +168,7 @@ jobs:
           }
 
           if (-not $allFound) {
-            Write-Error "librime 文件缺失，请确认 lib/ 和 include/ 目录已提交到仓库"
+            Write-Error "librime files missing. Please ensure lib/ and include/ are committed to the repo."
             exit 1
           }
 
@@ -340,5 +341,5 @@ jobs:
 
           Write-Host ""
           Write-Host "关键产物:"
-          Get-ChildItem "output\" -File | ForEach-Object { Write-Host "  $($_.Name) ($('{0:N0}' -f $_.Length) bytes)" }
+          Get-ChildItem "output\" -File | ForEach-Object { $s = "{0:N0}" -f $_.Length; Write-Host "  $($_.Name) ($s bytes)" }
           Write-Host "========================================"
