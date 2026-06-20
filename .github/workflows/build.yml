@@ -274,7 +274,7 @@ jobs:
           "@ | Out-File -FilePath "Directory.Build.props" -Encoding utf8
 
           # Copy required files
-          Copy-Item "LICENSE.txt" -Destination "output\" -Force
+          Copy-Item "LICENSE" -Destination "output\" -Force
           Copy-Item "README.md" -Destination "output\README.txt" -Force
 
           # Show build configuration
