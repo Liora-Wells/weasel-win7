@@ -159,6 +159,19 @@ jobs:
           New-Item -ItemType Directory -Path $env:BOOST_ROOT -Force | Out-Null
           & 7z x $boostZip -o"C:\Libraries" -y | Select-Object -Last 5
 
+      - name: Patch Boost build.bat for VS 2022
+        if: steps.cache-boost.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          $buildBat = "$env:BOOST_ROOT\tools\build\src\engine\build.bat"
+          Write-Host "Patching build.bat to recognize VS 2022 (17.x) as vc142..."
+          $content = Get-Content $buildBat -Raw
+          $old = 'if "%version%" GEQ "16.0" set "toolset=vc142"'
+          $new = 'if "%version%" GEQ "17.0" set "toolset=vc142"' + "`r`n" + 'if "%version%" GEQ "16.0" set "toolset=vc142"'
+          $content = $content.Replace($old, $new)
+          Set-Content -Path $buildBat -Value $content -NoNewline
+          Write-Host "Patched build.bat OK"
+
       - name: Build Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         shell: cmd
@@ -167,8 +180,8 @@ jobs:
           rem Set up v142 compiler paths
           set VC_ROOT=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\%VCVARS_VER%
 
-          rem Bootstrap without toolset argument (uses v143 to compile b2.exe)
-          if not exist b2.exe call bootstrap.bat
+          rem Bootstrap with vc142 toolset (build.bat patched for VS 2022 detection)
+          if not exist b2.exe call bootstrap.bat vc142
           if %ERRORLEVEL% NEQ 0 (
             echo === bootstrap.log ===
             type bootstrap.log
