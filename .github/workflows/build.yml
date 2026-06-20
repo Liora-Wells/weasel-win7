@@ -293,10 +293,11 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           rem Setup MSBuild environment with v142 toolset
-          set VC_ROOT=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\%VCVARS_VER%
-          set PATH=%VC_ROOT%\bin\Hostx64\x64;%PATH%
-          set INCLUDE=%VC_ROOT%\include;%VC_ROOT%\atlmfc\include;%INCLUDE%
-          set LIB=%VC_ROOT%\lib\x64;%VC_ROOT%\atlmfc\lib\x64;%LIB%
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64 -vcvars_ver=%VCVARS_VER%
+          if %ERRORLEVEL% NEQ 0 (
+            echo vcvarsall.bat failed with -vcvars_ver, trying without
+            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
+          )
 
           rem Build data files (requires bash from Git)
           set plum_dir=plum
